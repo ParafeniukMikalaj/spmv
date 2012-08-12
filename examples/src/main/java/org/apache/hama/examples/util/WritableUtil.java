@@ -18,6 +18,8 @@
 package org.apache.hama.examples.util;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.fs.FileStatus;
@@ -119,10 +121,21 @@ public class WritableUtil {
       Configuration conf) throws IOException {
     FileSystem fs = FileSystem.get(conf);
     SequenceFile.Reader reader = null;
+    Path path = new Path(pathString);
+    List<String> filePaths = new ArrayList<String>();
+    if (fs.isDirectory(path)) {
+      FileStatus[] stats = fs.listStatus(path);
+      for (FileStatus stat : stats)
+        filePaths.add(stat.getPath().toUri().getPath());
+    } else if (fs.isFile(path)) {
+      filePaths.add(path.toString());
+    }
     try {
-      reader = new SequenceFile.Reader(fs, new Path(pathString), conf);
-      IntWritable key = new IntWritable();
-      reader.next(key, result);
+      for (String filePath : filePaths) {
+        reader = new SequenceFile.Reader(fs, new Path(filePath), conf);
+        IntWritable key = new IntWritable();
+        reader.next(key, result);
+      }
     } catch (IOException e) {
       throw new RuntimeException(e);
     } finally {
@@ -176,9 +189,10 @@ public class WritableUtil {
    * @throws IOException
    */
   public String convertSpMVOutputToDenseVector(String SpMVoutputPathString,
-      Configuration conf, int size) throws IOException {
-    DenseVectorWritable result = new DenseVectorWritable();
-    result.setSize(size);
+      Configuration conf) throws IOException {
+    List<Integer> indeces = new ArrayList<Integer>();
+    List<Double> values = new ArrayList<Double>();
+
     FileSystem fs = FileSystem.get(conf);
     Path SpMVOutputPath = new Path(SpMVoutputPathString);
     Path resultOutputPath = SpMVOutputPath.getParent().suffix("/result");
@@ -191,8 +205,10 @@ public class WritableUtil {
         reader = new SequenceFile.Reader(fs, new Path(filePath), conf);
         IntWritable key = new IntWritable();
         DoubleWritable value = new DoubleWritable();
-        while (reader.next(key, value))
-          result.addCell(key.get(), value.get());
+        while (reader.next(key, value)) {
+          indeces.add(key.get());
+          values.add(value.get());
+        }
       } catch (IOException e) {
         throw new RuntimeException(e);
       } finally {
@@ -200,6 +216,10 @@ public class WritableUtil {
           reader.close();
       }
     }
+    DenseVectorWritable result = new DenseVectorWritable();
+    result.setSize(indeces.size());
+    for (int i = 0; i < indeces.size(); i++)
+      result.addCell(indeces.get(i), values.get(i));
     writeToFile(resultOutputPath.toString(), result, conf);
     return resultOutputPath.toString();
   }

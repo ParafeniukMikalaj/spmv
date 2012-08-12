@@ -46,7 +46,6 @@ public class ExampleDriver {
       pgd.addClass("matrixtotext", SeqToTextMatrix.class,
           "Conversion of matrix from sequence file to text");
       pgd.driver(args);
-      pgd.driver(args);
     } catch (Throwable e) {
       e.printStackTrace();
     }

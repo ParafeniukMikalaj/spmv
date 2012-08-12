@@ -28,14 +28,16 @@ public class RandomMatrixGeneratorTest {
   //@Test
   public void runFromDriver() {
     try {
-      ExampleDriver.main(new String[] { "rmgenerator", "/tmp/matrix-gen-1",
-          "4", "4", "0.1", "4" });
+      ExampleDriver.main(new String[] { "rmgenerator", "/home/mikalaj/spmv/simple/input-matrix-seq",
+          "4", "4", "0.4", "4" });
+      ExampleDriver.main(new String[] { "rmgenerator", "/home/mikalaj/spmv/simple/input-vector-seq",
+          "1", "4", "0.9", "4" });
     } catch (Exception e) {
       fail(e.getLocalizedMessage());
     }
   }
   
-  // @Test
+  //@Test
   public void testRandomMatrixGeneratorEmptyArgs() {
     try {
       RandomMatrixGenerator.main(new String[0]);
@@ -44,7 +46,7 @@ public class RandomMatrixGeneratorTest {
     }
   }
 
-  // @Test
+  @Test
   public void testRandomMatrixGeneratorIncorrectArgs() {
     try {
       RandomMatrixGenerator.main(new String[] { "/tmp/matrix-gen-1", "200",
@@ -76,7 +78,7 @@ public class RandomMatrixGeneratorTest {
     }
   }
 
-  @Test
+  //@Test
   public void testRandomMatrixGeneratorSmallSparse() {
     try {
       RandomMatrixGenerator.main(new String[] { "/tmp/matrix-gen-1", "4", "4",

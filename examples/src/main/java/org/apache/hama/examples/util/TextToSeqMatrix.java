@@ -38,13 +38,26 @@ import org.apache.hama.util.KeyValuePair;
 
 public class TextToSeqMatrix {
 
-  private static class TextToSeqBSP
-      extends
-      BSP<NullWritable, Writable, IntWritable, SparseVectorWritable, NullWritable> {
+  private static final String outputPathString = "converter.output";
+  private static final String inputPathString = "converter.intput";
+  private static final String converterTypeString = "converter.type";
+  private static final String requestedBspTasksString = "bsp.taskcount";
+
+  private static class TextToSeqBSP extends
+      BSP<NullWritable, Writable, IntWritable, Writable, NullWritable> {
+    private boolean sparse;
+
+    @Override
+    public void setup(
+        BSPPeer<NullWritable, Writable, IntWritable, Writable, NullWritable> peer)
+        throws IOException, SyncException, InterruptedException {
+      String converterType = peer.getConfiguration().get(converterTypeString);
+      sparse = (converterType.equals("sparse"));
+    }
 
     @Override
     public void bsp(
-        BSPPeer<NullWritable, Writable, IntWritable, SparseVectorWritable, NullWritable> peer)
+        BSPPeer<NullWritable, Writable, IntWritable, Writable, NullWritable> peer)
         throws IOException, SyncException, InterruptedException {
       KeyValuePair<NullWritable, Writable> row = null;
       while ((row = peer.readNext()) != null) {
@@ -52,13 +65,26 @@ public class TextToSeqMatrix {
         String input = row.getValue().toString();
         String[] arr = input.split(" ");
         int rowIndex = Integer.parseInt(arr[0].trim());
-        SparseVectorWritable vector = new SparseVectorWritable();
-        for (int i = 1; i < arr.length; i += 2) {
-          int index = Integer.parseInt(arr[i]);
-          double value = Double.parseDouble(arr[i + 1]);
-          vector.addCell(index, value);
+        int size = Integer.parseInt(arr[1].trim());
+        if (sparse) {
+          SparseVectorWritable vector = new SparseVectorWritable();
+          vector.setSize(size);
+          for (int i = 3; i < arr.length; i += 2) {
+            int index = Integer.parseInt(arr[i]);
+            double value = Double.parseDouble(arr[i + 1]);
+            vector.addCell(index, value);
+          }
+          peer.write(new IntWritable(rowIndex), vector);
+        } else {
+          DenseVectorWritable vector = new DenseVectorWritable();
+          vector.setSize(size);
+          for (int i = 3; i < arr.length; i += 2) {
+            int index = Integer.parseInt(arr[i]);
+            double value = Double.parseDouble(arr[i + 1]);
+            vector.addCell(index, value);
+          }
+          peer.write(new IntWritable(rowIndex), vector);
         }
-        peer.write(new IntWritable(rowIndex), vector);
       }
     }
 
@@ -66,26 +92,31 @@ public class TextToSeqMatrix {
 
   private static void printUsage() {
     System.out
-        .println("Usage: SeqToTextMatrix <input matrix dir> <output matrix dir>");
-    System.exit(-1);
+        .println("Usage: matrixtoseq <input matrix dir> <output matrix dir> <dense|sparse> [number of tasks (default max)]");
   }
 
   private static void parseArgs(HamaConfiguration conf, String[] args) {
-    if (args.length < 2)
+    if (args.length < 3) {
       printUsage();
+      System.exit(-1);
+    }
 
-    conf.set("converter.input", args[0]);
-    conf.set("converter.output", args[1]);
+    conf.set(inputPathString, args[0]);
+    conf.set(outputPathString, args[1]);
+    conf.set(converterTypeString, args[2]);
 
     if (args.length == 3) {
       try {
         int taskCount = Integer.parseInt(args[2]);
-        if (taskCount < 0)
+        if (taskCount < 0) {
+          printUsage();
           throw new IllegalArgumentException(
               "The number of requested tasks can't be negative. Actual value: "
                   + String.valueOf(taskCount));
-        conf.setInt("converter.taskcount", taskCount);
+        }
+        conf.setInt(requestedBspTasksString, taskCount);
       } catch (NumberFormatException e) {
+        printUsage();
         throw new IllegalArgumentException(
             "The format of requested task count is int. Can not parse value: "
                 + args[3]);
@@ -98,6 +129,10 @@ public class TextToSeqMatrix {
     BSPJob bsp = new BSPJob(conf, TextToSeqMatrix.class);
     bsp.setJobName("Conversion of matrix from text format to sequence file format.");
     bsp.setBspClass(TextToSeqBSP.class);
+    
+    String converterType = conf.get(converterTypeString);
+    boolean sparse = (converterType.equals("sparse"));
+    
     /*
      * Input matrix is presented as pairs of integer and {@ link
      * SparseVectorWritable}. Output is pairs of integer and double
@@ -106,15 +141,18 @@ public class TextToSeqMatrix {
     bsp.setInputKeyClass(IntWritable.class);
     bsp.setInputValueClass(SparseVectorWritable.class);
     bsp.setOutputKeyClass(IntWritable.class);
-    bsp.setOutputValueClass(SparseVectorWritable.class);
+    if (sparse)
+      bsp.setOutputValueClass(SparseVectorWritable.class);
+    else
+      bsp.setOutputValueClass(DenseVectorWritable.class);
     bsp.setOutputFormat(SequenceFileOutputFormat.class);
-    bsp.setInputPath(new Path(conf.get("converter.input", "/dev/null")));
-    bsp.setOutputPath(new Path(conf.get("converter.output", "/dev/null")));
+    bsp.setInputPath(new Path(conf.get(inputPathString, "/dev/null")));
+    bsp.setOutputPath(new Path(conf.get(outputPathString, "/dev/null")));
 
     BSPJobClient jobClient = new BSPJobClient(conf);
     ClusterStatus cluster = jobClient.getClusterStatus(true);
 
-    int requestedTasks = conf.getInt("converter.taskcount", -1);
+    int requestedTasks = conf.getInt(requestedBspTasksString, -1);
     if (requestedTasks != -1) {
       bsp.setNumBspTask(requestedTasks);
     } else {

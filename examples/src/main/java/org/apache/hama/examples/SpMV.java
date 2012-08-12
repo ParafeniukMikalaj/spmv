@@ -49,79 +49,23 @@ import org.apache.hama.util.KeyValuePair;
  */
 public class SpMV {
 
+  private static String resultPath;
   private static final String outputPathString = "spmv.outputpath";
-  private static final String resultPathString = "spmv.resultpath";
   private static final String inputMatrixPathString = "spmv.inputmatrixpath";
   private static final String inputVectorPathString = "spmv.inputvectorpath";
   private static String requestedBspTasksString = "bsptask.count";
-  private static final String spmvSuffix = "/spmv/";
   private static final String intermediate = "/part";
 
   enum RowCounter {
     TOTAL_ROWS
   }
 
-  private static Configuration conf;
-
-  public static Configuration getConf() {
-    return conf;
-  }
-
-  public static void setConf(Configuration conf) {
-    SpMV.conf = conf;
-  }
-
-  public static String getOutputPath(Configuration conf) {
-    return conf.get(outputPathString, null);
-  }
-
-  public static void setOutputPath(Configuration conf, String outputPath) {
-    Path path = new Path(outputPath);
-    path = path.suffix(intermediate);
-    conf.set(outputPathString, path.toString());
-  }
-
-  public static String getResultPath(Configuration conf) {
-    return conf.get(resultPathString, null);
-  }
-
   public static String getResultPath() {
-    return getConf().get(resultPathString, null);
+    return resultPath;
   }
 
-  private static void setResultPath(Configuration conf, String resultPath) {
-    conf.set(resultPathString, resultPath);
-  }
-
-  public static String getInputMatrixPath(Configuration conf) {
-    return conf.get(inputMatrixPathString, null);
-  }
-
-  public static void setInputMatrixPath(Configuration conf, String inputPath) {
-    conf.set(inputMatrixPathString, inputPath);
-  }
-
-  public static String getInputVectorPath(Configuration conf) {
-    return conf.get(inputVectorPathString, null);
-  }
-
-  public static void setInputVectorPath(Configuration conf, String inputPath) {
-    conf.set(inputVectorPathString, inputPath);
-  }
-
-  public static int getRequestedBspTasksCount(Configuration conf) {
-    return conf.getInt(requestedBspTasksString, -1);
-  }
-
-  public static void setRequestedBspTasksCount(Configuration conf,
-      int requestedBspTasksCount) {
-    conf.setInt(requestedBspTasksString, requestedBspTasksCount);
-  }
-
-  private static String generateOutPath(Configuration conf) {
-    String prefix = conf.get("hadoop.tmp.dir", "/tmp");
-    String pathString = prefix + spmvSuffix + System.currentTimeMillis();
-    return pathString;
+  public static void setResultPath(String resultPath) {
+    SpMV.resultPath = resultPath;
   }
 
   /**
@@ -132,8 +76,8 @@ public class SpMV {
       throws IOException {
     WritableUtil util = new WritableUtil();
     String resultPath = util.convertSpMVOutputToDenseVector(
-        getOutputPath(conf), conf, size);
-    setResultPath(conf, resultPath);
+        conf.get(outputPathString), conf);
+    setResultPath(resultPath);
   }
 
   /**
@@ -155,7 +99,7 @@ public class SpMV {
       Configuration conf = peer.getConfiguration();
       WritableUtil util = new WritableUtil();
       v = new DenseVectorWritable();
-      util.readFromFile(getInputVectorPath(conf), v, conf);
+      util.readFromFile(conf.get(inputVectorPathString), v, conf);
     }
 
     /**
@@ -170,7 +114,7 @@ public class SpMV {
         // it will be needed in conversion of output to result vector
         peer.getCounter(RowCounter.TOTAL_ROWS).increment(1L);
         int key = row.getKey().get();
-        int sum = 0;
+        double sum = 0;
         SparseVectorWritable mRow = row.getValue();
         if (v.getSize() != mRow.getSize())
           throw new RuntimeException("Matrix row with index = " + key
@@ -202,17 +146,16 @@ public class SpMV {
     bsp.setOutputKeyClass(IntWritable.class);
     bsp.setOutputValueClass(DoubleWritable.class);
     bsp.setOutputFormat(SequenceFileOutputFormat.class);
-    bsp.setInputPath(new Path(getInputMatrixPath(conf)));
+    bsp.setInputPath(new Path(conf.get(inputMatrixPathString)));
 
-    if (getOutputPath(conf) == null)
-      setOutputPath(conf, generateOutPath(conf));
-    FileOutputFormat.setOutputPath(bsp, new Path(getOutputPath(conf)));
+    FileOutputFormat.setOutputPath(bsp, new Path(conf.get(outputPathString)));
 
     BSPJobClient jobClient = new BSPJobClient(conf);
     ClusterStatus cluster = jobClient.getClusterStatus(true);
 
-    if (getRequestedBspTasksCount(conf) != -1) {
-      bsp.setNumBspTask(getRequestedBspTasksCount(conf));
+    int requestedTasks = conf.getInt(requestedBspTasksString, -1);
+    if (requestedTasks != -1) {
+      bsp.setNumBspTask(requestedTasks);
     } else {
       bsp.setNumBspTask(cluster.getMaxTasks());
     }
@@ -224,16 +167,15 @@ public class SpMV {
           + " seconds.");
       // FIXME get counter value instead of hardcode
       convertToDenseVector(conf, 4);
-      System.out.println("Result is in " + getResultPath(conf));
+      System.out.println("Result is in " + getResultPath());
     } else {
-      setResultPath(conf, null);
+      setResultPath(null);
     }
   }
 
   private static void printUsage() {
     System.out
-        .println("Usage: spmv <input matrix> <intput vector> [output vector] [number of tasks (default 20)]");
-    System.exit(-1);
+        .println("Usage: spmv <input matrix> <intput vector> <output vector> [number of tasks (default max)]");
   }
 
   /**
@@ -241,40 +183,41 @@ public class SpMV {
    * for more info.
    */
   private static void parseArgs(HamaConfiguration conf, String[] args) {
-    if (args.length < 2)
+    if (args.length < 3) {
       printUsage();
+      System.exit(-1);
+    }
 
-    SpMV.setInputMatrixPath(conf, args[0]);
-    SpMV.setInputVectorPath(conf, args[1]);
+    conf.set(inputMatrixPathString, args[0]);
+    conf.set(inputVectorPathString, args[1]);
 
-    if (args.length == 4) {
+    Path path = new Path(args[2]);
+    path = path.suffix(intermediate);
+    conf.set(outputPathString, path.toString());
+
+    if (args.length == 3) {
       try {
         int taskCount = Integer.parseInt(args[3]);
-        if (taskCount < 0)
+        if (taskCount < 0) {
+          printUsage();
           throw new IllegalArgumentException(
               "The number of requested tasks can't be negative. Actual value: "
                   + String.valueOf(taskCount));
-        SpMV.setRequestedBspTasksCount(conf, taskCount);
+        }
+        conf.setInt(requestedBspTasksString, taskCount);
       } catch (NumberFormatException e) {
+        printUsage();
         throw new IllegalArgumentException(
             "The format of requested task count is int. Can not parse value: "
                 + args[3]);
       }
     }
-
-    if (args.length >= 3) {
-      SpMV.setOutputPath(conf, args[2]);
-    }
   }
 
-  /**
-   * This method gives opportunity to start SpMV with command line.
-   */
   public static void main(String[] args) throws IOException,
       InterruptedException, ClassNotFoundException {
     HamaConfiguration conf = new HamaConfiguration();
     parseArgs(conf, args);
-    setConf(conf);
     startTask(conf);
   }
 

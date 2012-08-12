@@ -96,6 +96,7 @@ public class SparseVectorWritable implements Writable {
   @Override
   public String toString() {
     StringBuilder st = new StringBuilder();
+    st.append(" "+getSize()+" "+indeces.size());
     for (int i = 0; i < indeces.size(); i++) 
       st.append(" "+indeces.get(i)+" "+values.get(i));
     return st.toString();

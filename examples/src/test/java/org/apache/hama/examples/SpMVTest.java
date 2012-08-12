@@ -68,7 +68,7 @@ public class SpMVTest {
    * [0 2 3 0]   [6]   [24] 
    * [3 0 0 5]   [1]   [11]
    */
-  @Test
+  //@Test
   public void simpleSpMVTest() {
     try {
       HamaConfiguration conf = new HamaConfiguration();
@@ -112,6 +112,37 @@ public class SpMVTest {
       writableUtil.writeMatrix(vectorPath, conf, inputVector);
 
       String outputPath = baseDir + testDir;
+      SpMV.main(new String[]{matrixPath, vectorPath, outputPath, "4"});
+
+      String resultPath = SpMV.getResultPath();
+      DenseVectorWritable result = new DenseVectorWritable();
+      writableUtil.readFromFile(resultPath, result, conf);
+
+      double expected[] = { 38, 12, 24, 11 };
+      if (result.getSize() != size)
+        throw new Exception("Incorrect size of output vector");
+      for (int i = 0; i < result.getSize(); i++)
+        if ((result.get(i) - expected[i]) < 0.01)
+          expected[i] = 0;
+
+      for (int i = 0; i < expected.length; i++)
+        if (expected[i] != 0)
+          throw new Exception("Result doesn't meets expectations");
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      fail(e.getLocalizedMessage());
+    }
+  }
+  
+  @Test
+  public void simpleSpMVTestFile() {
+    try {
+      WritableUtil writableUtil = new WritableUtil();
+      int size = 4;
+      String matrixPath = "/home/mikalaj/spmv/simple/input-matrix-seq";
+      String vectorPath = "/home/mikalaj/spmv/simple/input-vector-seq";
+      String outputPath = "/home/mikalaj/spmv/simple/results";
       SpMV.main(new String[]{matrixPath, vectorPath, outputPath, "4"});
 
       String resultPath = SpMV.getResultPath();

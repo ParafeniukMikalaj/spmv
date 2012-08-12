@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Writable;
 import org.apache.hama.HamaConfiguration;
 import org.apache.hama.bsp.BSP;
 import org.apache.hama.bsp.BSPJob;
@@ -40,6 +41,7 @@ import org.apache.hama.bsp.FileOutputFormat;
 import org.apache.hama.bsp.NullInputFormat;
 import org.apache.hama.bsp.SequenceFileOutputFormat;
 import org.apache.hama.bsp.sync.SyncException;
+import org.apache.hama.examples.util.DenseVectorWritable;
 import org.apache.hama.examples.util.SparseVectorWritable;
 
 /**
@@ -50,17 +52,10 @@ import org.apache.hama.examples.util.SparseVectorWritable;
  */
 public class RandomMatrixGenerator {
 
-  private static Path TMP_OUTPUT = new Path("/tmp/matrix-gen-"
-      + System.currentTimeMillis());
-
   public static String requestedBspTasksString = "bsptask.count";
-
   public static String sparsityString = "randomgenerator.sparsity";
-
   public static String rowsString = "randomgenerator.rows";
-
   public static String columnsString = "randomgenerator.columns";
-
   public static String outputString = "randomgenerator.output";
 
   /*
@@ -72,57 +67,6 @@ public class RandomMatrixGenerator {
     TOTAL
   }
 
-  private static Configuration conf;
-
-  public static Configuration getConf() {
-    return conf;
-  }
-
-  public static void setConf(Configuration conf) {
-    RandomMatrixGenerator.conf = conf;
-  }
-
-  public static int getRequestedBspTasksCount(Configuration conf) {
-    return conf.getInt(requestedBspTasksString, -1);
-  }
-
-  public static void setRequestedBspTasksCount(Configuration conf,
-      int requestedBspTasksCount) {
-    conf.setInt(requestedBspTasksString, requestedBspTasksCount);
-  }
-
-  public static float getSparsity(Configuration conf) {
-    return conf.getFloat(sparsityString, 0.1f);
-  }
-
-  public static void setSparsity(Configuration conf, float sparsity) {
-    conf.setFloat(sparsityString, sparsity);
-  }
-
-  public static int getRows(Configuration conf) {
-    return conf.getInt(rowsString, 10);
-  }
-
-  public static void setRows(Configuration conf, int rows) {
-    conf.setInt(rowsString, rows);
-  }
-
-  public static int getColumns(Configuration conf) {
-    return conf.getInt(columnsString, 10);
-  }
-
-  public static void setColumns(Configuration conf, int columns) {
-    conf.setInt(columnsString, columns);
-  }
-
-  public static String getOutputPath(Configuration conf) {
-    return conf.get(outputString);
-  }
-
-  public static void setOutputPath(Configuration conf, String outputPath) {
-    conf.set(outputString, outputPath);
-  }
-
   /**
    * Class which currently implements row-wise logic. In case of sparsity > 0.5
    * can get not exact number of generated items, as expected. But it was made
@@ -130,7 +74,7 @@ public class RandomMatrixGenerator {
    */
   public static class MyGenerator
       extends
-      BSP<NullWritable, NullWritable, IntWritable, SparseVectorWritable, NullWritable> {
+      BSP<NullWritable, NullWritable, IntWritable, Writable, NullWritable> {
     public static final Log LOG = LogFactory.getLog(MyGenerator.class);
 
     private static int rows, columns;
@@ -142,12 +86,12 @@ public class RandomMatrixGenerator {
 
     @Override
     public void setup(
-        BSPPeer<NullWritable, NullWritable, IntWritable, SparseVectorWritable, NullWritable> peer)
+        BSPPeer<NullWritable, NullWritable, IntWritable, Writable, NullWritable> peer)
         throws IOException {
       Configuration conf = peer.getConfiguration();
-      sparsity = getSparsity(conf);
-      rows = getRows(conf);
-      columns = getColumns(conf);
+      sparsity = conf.getFloat(sparsityString, 0.1f);
+      rows = conf.getInt(rowsString, 10);
+      columns = conf.getInt(columnsString, 10);
       int total = rows * columns;
       peerCount = peer.getNumPeers();
       rand = new Random();
@@ -164,7 +108,7 @@ public class RandomMatrixGenerator {
      */
     @Override
     public void bsp(
-        BSPPeer<NullWritable, NullWritable, IntWritable, SparseVectorWritable, NullWritable> peer)
+        BSPPeer<NullWritable, NullWritable, IntWritable, Writable, NullWritable> peer)
         throws IOException, SyncException, InterruptedException {
 
       List<String> peerNamesList = Arrays.asList(peer.getAllPeerNames());
@@ -179,31 +123,36 @@ public class RandomMatrixGenerator {
       }
 
       for (int rowIndex : rowIndeces) {
-        SparseVectorWritable row = new SparseVectorWritable();
-        row.setSize(columns);
+        Writable row;
         createdIndeces.clear();
         int needsToGenerate = quotient;
         if (rowIndex < remainder)
           needsToGenerate++;
         if (sparsity < criticalSparsity) {
           // algorithm for sparse matrices.
+          SparseVectorWritable vector = new SparseVectorWritable();
+          vector.setSize(columns);
           while (createdIndeces.size() < needsToGenerate) {
             int index = (int) (rand.nextDouble() * columns);
             if (!createdIndeces.contains(index)) {
               peer.getCounter(TotalCounter.TOTAL).increment(1L);
               double value = rand.nextDouble();
-              row.addCell(index, value);
+              vector.addCell(index, value);
               createdIndeces.add(index);
             }
           }
+          row = vector;
         } else {
           // algorithm for dense matrices
+          DenseVectorWritable vector = new DenseVectorWritable();
+          vector.setSize(columns);
           for (int i = 0; i < columns; i++)
             if (rand.nextDouble() < sparsity) {
               peer.getCounter(TotalCounter.TOTAL).increment(1L);
               double value = rand.nextDouble();
-              row.addCell(i, value);
+              vector.addCell(i, value);
             }
+          row = vector;
         }
         /*
          * IMPORTANT: Maybe some optimization can be performed here in case of
@@ -233,20 +182,18 @@ public class RandomMatrixGenerator {
     bsp.setInputFormat(NullInputFormat.class);
     bsp.setOutputFormat(SequenceFileOutputFormat.class);
     bsp.setOutputKeyClass(IntWritable.class);
-    bsp.setOutputValueClass(SparseVectorWritable.class);
-    String pathString = getOutputPath(conf);
-    Path path = TMP_OUTPUT;
-    if (pathString != null)
-      path = new Path(pathString);
+    if (conf.getFloat(sparsityString, 0) < 0.5)
+      bsp.setOutputValueClass(SparseVectorWritable.class);
     else
-      setOutputPath(conf, TMP_OUTPUT.toString());
-    FileOutputFormat.setOutputPath(bsp, path);
+      bsp.setOutputValueClass(DenseVectorWritable.class);
+    FileOutputFormat.setOutputPath(bsp, new Path(conf.get(outputString)));
 
     BSPJobClient jobClient = new BSPJobClient(conf);
     ClusterStatus cluster = jobClient.getClusterStatus(true);
 
-    if (RandomMatrixGenerator.getRequestedBspTasksCount(conf) != -1) {
-      bsp.setNumBspTask(RandomMatrixGenerator.getRequestedBspTasksCount(conf));
+    int requestedTasks = conf.getInt(requestedBspTasksString, -1);
+    if (requestedTasks != -1) {
+      bsp.setNumBspTask(requestedTasks);
     } else {
       bsp.setNumBspTask(cluster.getMaxTasks());
     }
@@ -255,17 +202,15 @@ public class RandomMatrixGenerator {
     if (bsp.waitForCompletion(true)) {
       System.out.println("Job Finished in "
           + (double) (System.currentTimeMillis() - startTime) / 1000.0
-          + " seconds. Output is in " + getOutputPath(conf).toString());
+          + " seconds. Output is in " + conf.get(outputString));
     }
 
   }
 
   public static void printUsage() {
-    System.out
-        .println("Usage: rmgenerator [output path (default /tmp/matrix-gen-number)] "
-            + "[rows (default 10)] [columns (default 10)] "
-            + "[sparsity (default 0.1)] [tasks (default 20)]");
-    System.exit(-1);
+    System.out.println("Usage: rmgenerator <output path> "
+        + "[rows (default 10)] [columns (default 10)] "
+        + "[sparsity (default 0.1)] [tasks (default max)]");
   }
 
   /**
@@ -273,6 +218,12 @@ public class RandomMatrixGenerator {
    * for more details
    **/
   public static void parseArgs(HamaConfiguration conf, String[] args) {
+    if (args.length < 1) {
+      printUsage();
+      System.exit(-1);
+    }
+
+    conf.set(outputString, args[0]);
 
     if (args.length == 5) {
       try {
@@ -281,8 +232,7 @@ public class RandomMatrixGenerator {
           throw new IllegalArgumentException(
               "The number of requested bsp tasks can't be negative. Actual value: "
                   + String.valueOf(requestedBspTasksCount));
-        RandomMatrixGenerator.setRequestedBspTasksCount(conf,
-            requestedBspTasksCount);
+        conf.setInt(requestedBspTasksString, requestedBspTasksCount);
       } catch (NumberFormatException e) {
         printUsage();
         throw new IllegalArgumentException(
@@ -300,7 +250,7 @@ public class RandomMatrixGenerator {
               "Sparsity must be between 0.0 and 1.0. Actual value: "
                   + String.valueOf(sparsity));
         }
-        RandomMatrixGenerator.setSparsity(conf, sparsity);
+        conf.setFloat(sparsityString, sparsity);
       } catch (NumberFormatException e) {
         printUsage();
         throw new IllegalArgumentException(
@@ -311,12 +261,15 @@ public class RandomMatrixGenerator {
     if (args.length >= 3) {
       try {
         int columns = Integer.parseInt(args[2]);
-        if (columns < 0)
+        if (columns < 0) {
+          printUsage();
           throw new IllegalArgumentException(
               "The number of matrix columns can't be negative. Actual value: "
                   + String.valueOf(columns));
-        RandomMatrixGenerator.setColumns(conf, columns);
+        }
+        conf.setInt(columnsString, columns);
       } catch (NumberFormatException e) {
+        printUsage();
         throw new IllegalArgumentException(
             "The format of matrix columns is int. Can not parse value: "
                 + args[2]);
@@ -326,33 +279,25 @@ public class RandomMatrixGenerator {
     if (args.length >= 2) {
       try {
         int rows = Integer.parseInt(args[1]);
-        if (rows < 0)
+        if (rows < 0) {
+          printUsage();
           throw new IllegalArgumentException(
               "The number of matrix rows can't be negative. Actual value: "
                   + String.valueOf(rows));
-        RandomMatrixGenerator.setRows(conf, rows);
+        }
+        conf.setInt(rowsString, rows);
       } catch (NumberFormatException e) {
+        printUsage();
         throw new IllegalArgumentException(
             "The format of matrix rows is int. Can not parse value: " + args[1]);
       }
     }
-
-    if (args.length >= 1)
-      RandomMatrixGenerator.setOutputPath(conf, args[0]);
   }
 
-  /**
-   * Main function which gives an ability to start generator with command line.
-   * 
-   * @param args
-   *          command line
-   */
   public static void main(String[] args) throws IOException,
       InterruptedException, ClassNotFoundException {
-    // BSP job configuration
     HamaConfiguration conf = new HamaConfiguration();
     parseArgs(conf, args);
-    RandomMatrixGenerator.setConf(conf);
     startTask(conf);
   }
 

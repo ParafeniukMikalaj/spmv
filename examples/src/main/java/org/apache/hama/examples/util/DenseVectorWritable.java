@@ -34,7 +34,7 @@ public class DenseVectorWritable implements Writable {
   private double values[];
 
   public DenseVectorWritable() {
-
+    values = new double[0];
   }
 
   public int getSize() {
@@ -78,6 +78,7 @@ public class DenseVectorWritable implements Writable {
   @Override
   public String toString() {
     StringBuilder st = new StringBuilder();
+    st.append(" "+getSize()+" "+getSize());
     for (int i = 0; i < getSize(); i++) 
       st.append(" "+i+" "+values[i]);
     return st.toString();

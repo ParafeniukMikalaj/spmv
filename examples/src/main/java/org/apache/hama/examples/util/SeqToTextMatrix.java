@@ -57,13 +57,14 @@ public class SeqToTextMatrix {
 
   private static void printUsage() {
     System.out
-        .println("Usage: SeqToTextMatrix <input matrix dir> <output matrix dir>");
-    System.exit(-1);
+        .println("Usage: matrixtotext <input matrix dir> <output matrix dir> [number of tasks (default max)]");
   }
 
   private static void parseArgs(HamaConfiguration conf, String[] args) {
-    if (args.length < 2)
+    if (args.length < 2) {
       printUsage();
+      System.exit(-1); 
+    }
 
     conf.set("converter.input", args[0]);
     conf.set("converter.output", args[1]);
@@ -71,15 +72,18 @@ public class SeqToTextMatrix {
     if (args.length == 3) {
       try {
         int taskCount = Integer.parseInt(args[2]);
-        if (taskCount < 0)
+        if (taskCount < 0) {
+          printUsage();
           throw new IllegalArgumentException(
               "The number of requested tasks can't be negative. Actual value: "
                   + String.valueOf(taskCount));
+        }
         conf.setInt("converter.taskcount", taskCount);
       } catch (NumberFormatException e) {
+        printUsage();
         throw new IllegalArgumentException(
             "The format of requested task count is int. Can not parse value: "
-                + args[3]);
+                + args[2]);
       }
     }
   }
