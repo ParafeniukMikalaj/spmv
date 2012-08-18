@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -35,13 +37,15 @@ import org.apache.hama.HamaConfiguration;
 /**
  * This class is supposed to hide some operations for converting matrices and
  * vectors from file format to in-memory format. Also contains method for
- * converting output of SpMV task to {@link DenseVectorWritable} Most of methods
- * are only needed for test purposes.
+ * converting output of SpMV task to DenseVectorWritable Most of methods are
+ * only needed for test purposes.
  */
 public class WritableUtil {
 
+  protected static final Log LOG = LogFactory.getLog(WritableUtil.class);
+
   /**
-   * Method used to test {@link RandomMatrixGenerator}. Reads input matrix from
+   * Method used to test RandomMatrixGenerator. Reads input matrix from
    * specified path and prints to System.out
    */
   public void readMatrix(String pathString) throws IOException {
@@ -58,7 +62,7 @@ public class WritableUtil {
         IntWritable key = new IntWritable();
         SparseVectorWritable value = new SparseVectorWritable();
         while (reader.next(key, value)) {
-          System.out.print(key.toString());
+          System.out.println(key.toString());
           System.out.println(value.toString());
         }
       } catch (IOException e) {
@@ -77,7 +81,7 @@ public class WritableUtil {
    * @param conf
    *          configuration
    * @param matrix
-   *          map of row indeces and values presented as {@link Writable}
+   *          map of row indeces and values presented as Writable
    * @throws IOException
    */
   public void writeMatrix(String pathString, Configuration conf,
@@ -106,8 +110,8 @@ public class WritableUtil {
   }
 
   /**
-   * This method is used to read vector from specified path in {@link SpMVTest}.
-   * For test purposes only.
+   * This method is used to read vector from specified path in SpMVTest. For
+   * test purposes only.
    * 
    * @param pathString
    *          input path for vector
@@ -117,16 +121,19 @@ public class WritableUtil {
    *          configuration
    * @throws IOException
    */
+  @SuppressWarnings("deprecation")
   public void readFromFile(String pathString, Writable result,
       Configuration conf) throws IOException {
     FileSystem fs = FileSystem.get(conf);
     SequenceFile.Reader reader = null;
     Path path = new Path(pathString);
     List<String> filePaths = new ArrayList<String>();
+    // TODO this deprecation should be fixed.
     if (fs.isDirectory(path)) {
       FileStatus[] stats = fs.listStatus(path);
-      for (FileStatus stat : stats)
+      for (FileStatus stat : stats) {
         filePaths.add(stat.getPath().toUri().getPath());
+      }
     } else if (fs.isFile(path)) {
       filePaths.add(path.toString());
     }
@@ -176,15 +183,13 @@ public class WritableUtil {
    * SpMV produces a file, which contains result dense vector in format of pairs
    * of integer and double. The aim of this method is to convert SpMV output to
    * format usable in subsequent computation - dense vector. It can be usable
-   * for iterative solvers. IMPORTANT: currently it is used in {@link SpMV}. It
-   * can be a bottle neck, because all input needs to be stored in memory.
+   * for iterative solvers. IMPORTANT: currently it is used in SpMV. It can be a
+   * bottle neck, because all input needs to be stored in memory.
    * 
    * @param SpMVoutputPathString
    *          output path, which represents directory with part files.
    * @param conf
    *          configuration
-   * @param size
-   *          size of generated result vector. retrieved from counter.
    * @return path to output vector.
    * @throws IOException
    */

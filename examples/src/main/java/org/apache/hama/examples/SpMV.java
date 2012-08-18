@@ -20,6 +20,8 @@ package org.apache.hama.examples;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DoubleWritable;
@@ -49,6 +51,7 @@ import org.apache.hama.util.KeyValuePair;
  */
 public class SpMV {
 
+  protected static final Log LOG = LogFactory.getLog(SpMV.class);
   private static String resultPath;
   private static final String outputPathString = "spmv.outputpath";
   private static final String inputMatrixPathString = "spmv.inputmatrixpath";
@@ -72,7 +75,7 @@ public class SpMV {
    * IMPORTANT: This can be a bottle neck. Problem can be here{@core
    * WritableUtil.convertSpMVOutputToDenseVector()}
    */
-  private static void convertToDenseVector(Configuration conf, int size)
+  private static void convertToDenseVector(Configuration conf)
       throws IOException {
     WritableUtil util = new WritableUtil();
     String resultPath = util.convertSpMVOutputToDenseVector(
@@ -100,6 +103,7 @@ public class SpMV {
       WritableUtil util = new WritableUtil();
       v = new DenseVectorWritable();
       util.readFromFile(conf.get(inputVectorPathString), v, conf);
+      peer.sync();
     }
 
     /**
@@ -139,8 +143,8 @@ public class SpMV {
     bsp.setJobName("Sparse matrix vector multiplication");
     bsp.setBspClass(SpMVExecutor.class);
     /*
-     * Input matrix is presented as pairs of integer and {@ link
-     * SparseVectorWritable}. Output is pairs of integer and double
+     * Input matrix is presented as pairs of integer and SparseVectorWritable.
+     * Output is pairs of integer and double
      */
     bsp.setInputFormat(SequenceFileInputFormat.class);
     bsp.setOutputKeyClass(IntWritable.class);
@@ -165,8 +169,7 @@ public class SpMV {
       System.out.println("Job Finished in "
           + (double) (System.currentTimeMillis() - startTime) / 1000.0
           + " seconds.");
-      // FIXME get counter value instead of hardcode
-      convertToDenseVector(conf, 4);
+      convertToDenseVector(conf);
       System.out.println("Result is in " + getResultPath());
     } else {
       setResultPath(null);
@@ -179,8 +182,7 @@ public class SpMV {
   }
 
   /**
-   * Function parses command line in standart form. See {@link #printUsage()}
-   * for more info.
+   * Function parses command line in standart form.
    */
   private static void parseArgs(HamaConfiguration conf, String[] args) {
     if (args.length < 3) {
@@ -195,7 +197,7 @@ public class SpMV {
     path = path.suffix(intermediate);
     conf.set(outputPathString, path.toString());
 
-    if (args.length == 3) {
+    if (args.length == 4) {
       try {
         int taskCount = Integer.parseInt(args[3]);
         if (taskCount < 0) {

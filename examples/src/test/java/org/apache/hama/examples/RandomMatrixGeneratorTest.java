@@ -23,29 +23,48 @@ import org.apache.hama.examples.ExampleDriver;
 import org.apache.hama.examples.RandomMatrixGenerator;
 import org.junit.Test;
 
+/**
+ * This is class for test cases for RandomMatrixGenerator. It will contain tests
+ * for different sizes of matrices and different sparsities, command line
+ * parsing. In most examples you should specify input and output paths.
+ */
 public class RandomMatrixGeneratorTest {
 
-  //@Test
+  /**
+   * Simple test for running from ExampleDriver. You should specify paths.
+   */
+  @Test
   public void runFromDriver() {
     try {
-      ExampleDriver.main(new String[] { "rmgenerator", "/home/mikalaj/spmv/simple/input-matrix-seq",
-          "4", "4", "0.4", "4" });
-      ExampleDriver.main(new String[] { "rmgenerator", "/home/mikalaj/spmv/simple/input-vector-seq",
-          "1", "4", "0.9", "4" });
+      String outputPath = "";
+      if (outputPath.isEmpty()) {
+        System.out
+            .println("Please setup input path for vector and matrix and output path for result, "
+                + "if you want to run this example");
+        return;
+      }
+      ExampleDriver.main(new String[] { "rmgenerator", outputPath, "1", "4",
+          "0.9", "3" });
     } catch (Exception e) {
       fail(e.getLocalizedMessage());
     }
   }
-  
-  //@Test
+
+  /**
+   * Test for incorrect command-line arguments. NOTE: should be commented.
+   */
+  // @Test
   public void testRandomMatrixGeneratorEmptyArgs() {
     try {
       RandomMatrixGenerator.main(new String[0]);
     } catch (Exception e) {
-      fail(e.getLocalizedMessage());
+      // everything ok
     }
   }
 
+  /**
+   * Test for incorrect command-line arguments.
+   */
   @Test
   public void testRandomMatrixGeneratorIncorrectArgs() {
     try {
@@ -57,7 +76,10 @@ public class RandomMatrixGeneratorTest {
     }
   }
 
-  // @Test
+  /**
+   * Test for incorrect command-line arguments.
+   */
+  @Test
   public void testRandomMatrixGeneratorIncorrectArgs1() {
     try {
       RandomMatrixGenerator.main(new String[] { "/tmp/matrix-gen-1", "200",
@@ -68,7 +90,10 @@ public class RandomMatrixGeneratorTest {
     }
   }
 
-  // @Test
+  /**
+   * Test for incorrect command-line arguments.
+   */
+  @Test
   public void testRandomMatrixGeneratorIncorrectArgs2() {
     try {
       RandomMatrixGenerator.main(new String[] { "-c=200", "-r=200", "-s=#" });
@@ -78,42 +103,82 @@ public class RandomMatrixGeneratorTest {
     }
   }
 
-  //@Test
+  /**
+   * Test for small 4x4 sparse matrix. You should specify paths.
+   */
+  @Test
   public void testRandomMatrixGeneratorSmallSparse() {
     try {
-      RandomMatrixGenerator.main(new String[] { "/tmp/matrix-gen-1", "4", "4",
-          "0.1", "2" });
+      String outputPath = "";
+      if (outputPath.isEmpty()) {
+        System.out
+            .println("Please setup input path for vector and matrix and output path for result, "
+                + "if you want to run this example");
+        return;
+      }
+      RandomMatrixGenerator.main(new String[] { outputPath, "4", "4", "0.1",
+          "2" });
     } catch (Exception e) {
       e.printStackTrace();
       fail(e.getLocalizedMessage());
     }
   }
 
-  // @Test
+  /**
+   * Test for big 10000x10000 sparse matrix. You should specify paths.
+   */
+  @Test
   public void testRandomMatrixGeneratorLargeSparse() {
     try {
-      RandomMatrixGenerator.main(new String[] { "/tmp/matrix-gen-2", "10000",
-          "10000", "0.1", "4" });
+      String outputPath = "";
+      if (outputPath.isEmpty()) {
+        System.out
+            .println("Please setup input path for vector and matrix and output path for result, "
+                + "if you want to run this example");
+        return;
+      }
+      RandomMatrixGenerator.main(new String[] { outputPath, "10000", "10000",
+          "0.1", "4" });
     } catch (Exception e) {
       fail(e.getLocalizedMessage());
     }
   }
 
-  // @Test
+  /**
+   * Test for small 4x4 sparse matrix. You should specify paths.
+   */
+  @Test
   public void testRandomMatrixGeneratorSmallDense() {
     try {
-      RandomMatrixGenerator.main(new String[] { "/tmp/matrix-gen-1", "4", "4",
-          "0.8", "4" });
+      String outputPath = "";
+      if (outputPath.isEmpty()) {
+        System.out
+            .println("Please setup input path for vector and matrix and output path for result, "
+                + "if you want to run this example");
+        return;
+      }
+      RandomMatrixGenerator.main(new String[] { outputPath, "4", "4", "0.8",
+          "4" });
     } catch (Exception e) {
       fail(e.getLocalizedMessage());
     }
   }
 
-  // @Test
+  /**
+   * Test for big 200x200 dense matrix. You should specify paths.
+   */
+  @Test
   public void testRandomMatrixGeneratorLargeDense() {
     try {
-      RandomMatrixGenerator.main(new String[] { "/tmp/matrix-gen-1", "200",
-          "200", "0.8", "4" });
+      String outputPath = "";
+      if (outputPath.isEmpty()) {
+        System.out
+            .println("Please setup input path for vector and matrix and output path for result, "
+                + "if you want to run this example");
+        return;
+      }
+      RandomMatrixGenerator.main(new String[] { outputPath, "200", "200",
+          "0.8", "4" });
     } catch (Exception e) {
       fail(e.getLocalizedMessage());
     }

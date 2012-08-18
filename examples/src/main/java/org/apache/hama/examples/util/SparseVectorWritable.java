@@ -28,7 +28,7 @@ import org.apache.hadoop.io.Writable;
 /**
  * This class represents sparse vector. It will give improvement in memory
  * consumption in case of vectors which sparsity is close to zero. Can be used
- * in {@link SpMV} for representing input matrix rows efficiently. Internally
+ * in SpMV for representing input matrix rows efficiently. Internally
  * represents values as list of indeces and list of values.
  */
 public class SparseVectorWritable implements Writable {

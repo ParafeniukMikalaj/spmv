@@ -21,6 +21,8 @@ package org.apache.hama.examples.util;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -36,8 +38,12 @@ import org.apache.hama.bsp.TextInputFormat;
 import org.apache.hama.bsp.sync.SyncException;
 import org.apache.hama.util.KeyValuePair;
 
+/**
+ * Class for conversion matrix from text to sequence format.
+ */
 public class TextToSeqMatrix {
 
+  protected static final Log LOG = LogFactory.getLog(TextToSeqMatrix.class);
   private static final String outputPathString = "converter.output";
   private static final String inputPathString = "converter.intput";
   private static final String converterTypeString = "converter.type";
@@ -95,6 +101,9 @@ public class TextToSeqMatrix {
         .println("Usage: matrixtoseq <input matrix dir> <output matrix dir> <dense|sparse> [number of tasks (default max)]");
   }
 
+  /**
+   * Method for parsing command-line arguments.
+   */
   private static void parseArgs(HamaConfiguration conf, String[] args) {
     if (args.length < 3) {
       printUsage();
@@ -105,9 +114,9 @@ public class TextToSeqMatrix {
     conf.set(outputPathString, args[1]);
     conf.set(converterTypeString, args[2]);
 
-    if (args.length == 3) {
+    if (args.length == 4) {
       try {
-        int taskCount = Integer.parseInt(args[2]);
+        int taskCount = Integer.parseInt(args[3]);
         if (taskCount < 0) {
           printUsage();
           throw new IllegalArgumentException(
@@ -124,18 +133,21 @@ public class TextToSeqMatrix {
     }
   }
 
+  /**
+   * Method which actually starts task.
+   */
   private static void startTask(HamaConfiguration conf) throws IOException,
       InterruptedException, ClassNotFoundException {
     BSPJob bsp = new BSPJob(conf, TextToSeqMatrix.class);
     bsp.setJobName("Conversion of matrix from text format to sequence file format.");
     bsp.setBspClass(TextToSeqBSP.class);
-    
+
     String converterType = conf.get(converterTypeString);
     boolean sparse = (converterType.equals("sparse"));
-    
+
     /*
-     * Input matrix is presented as pairs of integer and {@ link
-     * SparseVectorWritable}. Output is pairs of integer and double
+     * Input matrix is presented as pairs of integer and SparseVectorWritable.
+     * Output is pairs of integer and double
      */
     bsp.setInputFormat(TextInputFormat.class);
     bsp.setInputKeyClass(IntWritable.class);

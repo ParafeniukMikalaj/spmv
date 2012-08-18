@@ -45,13 +45,15 @@ import org.apache.hama.examples.util.DenseVectorWritable;
 import org.apache.hama.examples.util.SparseVectorWritable;
 
 /**
- * This class can generate random matrix. It uses {@link MyGenerator}. You can
- * specify different options in command line. {@link parseArgs} for more info.
- * Option for symmetric matrices is not supported yet. Currently it implements
- * row-wise logic, which is usable for {@link SpMV}
+ * This class can generate random matrix. You can specify different options in
+ * command line. See {@link #parseArgs} for more info. Option for symmetric
+ * matrices is not supported yet. Currently it implements row-wise logic, which
+ * is usable for SpMV.
  */
 public class RandomMatrixGenerator {
 
+  protected static final Log LOG = LogFactory
+      .getLog(RandomMatrixGenerator.class);
   public static String requestedBspTasksString = "bsptask.count";
   public static String sparsityString = "randomgenerator.sparsity";
   public static String rowsString = "randomgenerator.rows";
@@ -72,11 +74,9 @@ public class RandomMatrixGenerator {
    * can get not exact number of generated items, as expected. But it was made
    * for efficiency.
    */
-  public static class MyGenerator
-      extends
+  public static class MyGenerator extends
       BSP<NullWritable, NullWritable, IntWritable, Writable, NullWritable> {
-    public static final Log LOG = LogFactory.getLog(MyGenerator.class);
-
+    
     private static int rows, columns;
     private static float sparsity;
     private static int remainder, quotient, needed;
@@ -87,12 +87,13 @@ public class RandomMatrixGenerator {
     @Override
     public void setup(
         BSPPeer<NullWritable, NullWritable, IntWritable, Writable, NullWritable> peer)
-        throws IOException {
+        throws IOException, SyncException, InterruptedException {
       Configuration conf = peer.getConfiguration();
       sparsity = conf.getFloat(sparsityString, 0.1f);
       rows = conf.getInt(rowsString, 10);
       columns = conf.getInt(columnsString, 10);
       int total = rows * columns;
+      peer.sync();
       peerCount = peer.getNumPeers();
       rand = new Random();
       needed = (int) (total * sparsity);
@@ -157,8 +158,7 @@ public class RandomMatrixGenerator {
         /*
          * IMPORTANT: Maybe some optimization can be performed here in case of
          * very sparse matrices with empty rows. But I am confused: how to store
-         * number of non-zero rows with saving partitioning by rows in {@link
-         * SpMV}.
+         * number of non-zero rows with saving partitioning by rows in SpMV.
          */
         // if (row.getSize() > 0)
         peer.write(new IntWritable(rowIndex), row);
@@ -214,8 +214,7 @@ public class RandomMatrixGenerator {
   }
 
   /**
-   * Function parses command line in standart format. See {@link #printUsage()}
-   * for more details
+   * Function parses command line in standart format. for more details
    **/
   public static void parseArgs(HamaConfiguration conf, String[] args) {
     if (args.length < 1) {

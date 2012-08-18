@@ -25,9 +25,9 @@ import org.apache.hadoop.io.Writable;
 
 /**
  * This class represents dense vector. It will improve memory consumption up to
- * two times in comparison to {@link SparseVectorWritable} in case of vectors
+ * two times in comparison to SparseVectorWritable in case of vectors
  * which sparsity is close to 1. Internally represents vector values as array.
- * Can be used in {@link SpMV} for representation of input and output vector.
+ * Can be used in SpMV for representation of input and output vector.
  */
 public class DenseVectorWritable implements Writable {
 

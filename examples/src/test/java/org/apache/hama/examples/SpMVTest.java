@@ -50,14 +50,26 @@ public class SpMVTest {
     baseDir = fs.getHomeDirectory().toString() + "/spmv";
   }
 
-  //@Test
+  /**
+   * Simple test of running spmv from {@link ExampleDriver}. You should specify
+   * paths.
+   */
+  @Test
   public void runFromDriver() {
     try {
-      ExampleDriver.main(new String[] { "spmv", "inputMatrix", "inputVector",
-          "outputVector", "4" });
+      String matrixPath = "";
+      String vectorPath = "";
+      String outputPath = "";
+      if (matrixPath.isEmpty() || vectorPath.isEmpty() || outputPath.isEmpty()) {
+        System.out
+            .println("Please setup input path for vector and matrix and output path for result.");
+        return;
+      }
+      ExampleDriver.main(new String[] { "spmv", matrixPath, vectorPath,
+          outputPath, "4" });
     } catch (Exception e) {
-      // everything ok, because here we check only parsing of command-line
-      // arguments
+      e.printStackTrace();
+      fail(e.getLocalizedMessage());
     }
   }
 
@@ -68,7 +80,7 @@ public class SpMVTest {
    * [0 2 3 0]   [6]   [24] 
    * [3 0 0 5]   [1]   [11]
    */
-  //@Test
+  @Test
   public void simpleSpMVTest() {
     try {
       HamaConfiguration conf = new HamaConfiguration();
@@ -112,7 +124,7 @@ public class SpMVTest {
       writableUtil.writeMatrix(vectorPath, conf, inputVector);
 
       String outputPath = baseDir + testDir;
-      SpMV.main(new String[]{matrixPath, vectorPath, outputPath, "4"});
+      SpMV.main(new String[] { matrixPath, vectorPath, outputPath, "4" });
 
       String resultPath = SpMV.getResultPath();
       DenseVectorWritable result = new DenseVectorWritable();
@@ -134,16 +146,25 @@ public class SpMVTest {
       fail(e.getLocalizedMessage());
     }
   }
-  
+
+  /**
+   * Simple test of spmv work with files. You should specify paths.
+   */
   @Test
   public void simpleSpMVTestFile() {
     try {
       WritableUtil writableUtil = new WritableUtil();
       int size = 4;
-      String matrixPath = "/home/mikalaj/spmv/simple/input-matrix-seq";
-      String vectorPath = "/home/mikalaj/spmv/simple/input-vector-seq";
-      String outputPath = "/home/mikalaj/spmv/simple/results";
-      SpMV.main(new String[]{matrixPath, vectorPath, outputPath, "4"});
+      String matrixPath = "";
+      String vectorPath = "";
+      String outputPath = "";
+      if (matrixPath.isEmpty() || vectorPath.isEmpty() || outputPath.isEmpty()) {
+        System.out
+            .println("Please setup input path for vector and matrix and output path for result, "
+                + "if you want to run this example");
+        return;
+      }
+      SpMV.main(new String[] { matrixPath, vectorPath, outputPath, "4" });
 
       String resultPath = SpMV.getResultPath();
       DenseVectorWritable result = new DenseVectorWritable();
