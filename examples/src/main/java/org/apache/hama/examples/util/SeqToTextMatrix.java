@@ -65,8 +65,7 @@ public class SeqToTextMatrix {
   }
 
   private static void printUsage() {
-    System.out
-        .println("Usage: matrixtotext <input matrix dir> <output matrix dir> [number of tasks (default max)]");
+    LOG.info("Usage: matrixtotext <input matrix dir> <output matrix dir> [number of tasks (default max)]");
   }
 
   /**
@@ -133,7 +132,7 @@ public class SeqToTextMatrix {
 
     long startTime = System.currentTimeMillis();
     if (bsp.waitForCompletion(true)) {
-      System.out.println("Job Finished in "
+      LOG.info("Job Finished in "
           + (double) (System.currentTimeMillis() - startTime) / 1000.0
           + " seconds.");
     }

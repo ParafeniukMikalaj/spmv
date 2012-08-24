@@ -19,6 +19,8 @@ package org.apache.hama.examples;
 
 import static org.junit.Assert.fail;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hama.examples.ExampleDriver;
 import org.apache.hama.examples.RandomMatrixGenerator;
 import org.junit.Test;
@@ -30,6 +32,8 @@ import org.junit.Test;
  */
 public class RandomMatrixGeneratorTest {
 
+  protected static final Log LOG = LogFactory.getLog(RandomMatrixGeneratorTest.class);
+
   /**
    * Simple test for running from ExampleDriver. You should specify paths.
    */
@@ -38,8 +42,7 @@ public class RandomMatrixGeneratorTest {
     try {
       String outputPath = "";
       if (outputPath.isEmpty()) {
-        System.out
-            .println("Please setup input path for vector and matrix and output path for result, "
+        LOG.info("Please setup input path for vector and matrix and output path for result, "
                 + "if you want to run this example");
         return;
       }
@@ -111,8 +114,7 @@ public class RandomMatrixGeneratorTest {
     try {
       String outputPath = "";
       if (outputPath.isEmpty()) {
-        System.out
-            .println("Please setup input path for vector and matrix and output path for result, "
+        LOG.info("Please setup input path for vector and matrix and output path for result, "
                 + "if you want to run this example");
         return;
       }
@@ -132,8 +134,7 @@ public class RandomMatrixGeneratorTest {
     try {
       String outputPath = "";
       if (outputPath.isEmpty()) {
-        System.out
-            .println("Please setup input path for vector and matrix and output path for result, "
+        LOG.info("Please setup input path for vector and matrix and output path for result, "
                 + "if you want to run this example");
         return;
       }
@@ -152,8 +153,7 @@ public class RandomMatrixGeneratorTest {
     try {
       String outputPath = "";
       if (outputPath.isEmpty()) {
-        System.out
-            .println("Please setup input path for vector and matrix and output path for result, "
+        LOG.info("Please setup input path for vector and matrix and output path for result, "
                 + "if you want to run this example");
         return;
       }
@@ -172,8 +172,7 @@ public class RandomMatrixGeneratorTest {
     try {
       String outputPath = "";
       if (outputPath.isEmpty()) {
-        System.out
-            .println("Please setup input path for vector and matrix and output path for result, "
+        LOG.info("Please setup input path for vector and matrix and output path for result, "
                 + "if you want to run this example");
         return;
       }

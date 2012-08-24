@@ -48,7 +48,7 @@ public class WritableUtil {
    * Method used to test RandomMatrixGenerator. Reads input matrix from
    * specified path and prints to System.out
    */
-  public void readMatrix(String pathString) throws IOException {
+  public static void readMatrix(String pathString) throws IOException {
     HamaConfiguration conf = new HamaConfiguration();
     Path dir = new Path(pathString);
     FileSystem fs = FileSystem.get(conf);
@@ -84,7 +84,7 @@ public class WritableUtil {
    *          map of row indeces and values presented as Writable
    * @throws IOException
    */
-  public void writeMatrix(String pathString, Configuration conf,
+  public static void writeMatrix(String pathString, Configuration conf,
       Map<Integer, Writable> matrix) throws IOException {
     boolean inited = false;
     FileSystem fs = FileSystem.get(conf);
@@ -122,7 +122,7 @@ public class WritableUtil {
    * @throws IOException
    */
   @SuppressWarnings("deprecation")
-  public void readFromFile(String pathString, Writable result,
+  public static void readFromFile(String pathString, Writable result,
       Configuration conf) throws IOException {
     FileSystem fs = FileSystem.get(conf);
     SequenceFile.Reader reader = null;
@@ -162,7 +162,7 @@ public class WritableUtil {
    *          configuration
    * @throws IOException
    */
-  public void writeToFile(String pathString, Writable result, Configuration conf)
+  public static void writeToFile(String pathString, Writable result, Configuration conf)
       throws IOException {
     FileSystem fs = FileSystem.get(conf);
     SequenceFile.Writer writer = null;
@@ -193,7 +193,7 @@ public class WritableUtil {
    * @return path to output vector.
    * @throws IOException
    */
-  public String convertSpMVOutputToDenseVector(String SpMVoutputPathString,
+  public static String convertSpMVOutputToDenseVector(String SpMVoutputPathString,
       Configuration conf) throws IOException {
     List<Integer> indeces = new ArrayList<Integer>();
     List<Double> values = new ArrayList<Double>();

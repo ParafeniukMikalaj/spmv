@@ -97,8 +97,7 @@ public class TextToSeqMatrix {
   }
 
   private static void printUsage() {
-    System.out
-        .println("Usage: matrixtoseq <input matrix dir> <output matrix dir> <dense|sparse> [number of tasks (default max)]");
+    LOG.info("Usage: matrixtoseq <input matrix dir> <output matrix dir> <dense|sparse> [number of tasks (default max)]");
   }
 
   /**
@@ -173,7 +172,7 @@ public class TextToSeqMatrix {
 
     long startTime = System.currentTimeMillis();
     if (bsp.waitForCompletion(true)) {
-      System.out.println("Job Finished in "
+      LOG.info("Job Finished in "
           + (double) (System.currentTimeMillis() - startTime) / 1000.0
           + " seconds.");
     }

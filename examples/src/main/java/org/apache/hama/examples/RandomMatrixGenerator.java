@@ -74,7 +74,7 @@ public class RandomMatrixGenerator {
    * can get not exact number of generated items, as expected. But it was made
    * for efficiency.
    */
-  public static class MyGenerator extends
+  public static class RandomMatrixGeneratorBSP extends
       BSP<NullWritable, NullWritable, IntWritable, Writable, NullWritable> {
     
     private static int rows, columns;
@@ -178,7 +178,7 @@ public class RandomMatrixGenerator {
      * rows with row index key. TextOutputFormat is for readability it will be
      * replaces by SequenceFileOutputFormat.
      */
-    bsp.setBspClass(MyGenerator.class);
+    bsp.setBspClass(RandomMatrixGeneratorBSP.class);
     bsp.setInputFormat(NullInputFormat.class);
     bsp.setOutputFormat(SequenceFileOutputFormat.class);
     bsp.setOutputKeyClass(IntWritable.class);
@@ -200,15 +200,15 @@ public class RandomMatrixGenerator {
 
     long startTime = System.currentTimeMillis();
     if (bsp.waitForCompletion(true)) {
-      System.out.println("Job Finished in "
-          + (double) (System.currentTimeMillis() - startTime) / 1000.0
+      LOG.info("Job Finished in "
+          + (System.currentTimeMillis() - startTime) / 1000.0
           + " seconds. Output is in " + conf.get(outputString));
     }
 
   }
 
   public static void printUsage() {
-    System.out.println("Usage: rmgenerator <output path> "
+    LOG.info("Usage: rmgenerator <output path> "
         + "[rows (default 10)] [columns (default 10)] "
         + "[sparsity (default 0.1)] [tasks (default max)]");
   }

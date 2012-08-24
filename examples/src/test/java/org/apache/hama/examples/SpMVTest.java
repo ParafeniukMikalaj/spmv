@@ -22,6 +22,8 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.HashMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.Writable;
 import org.apache.hama.HamaConfiguration;
@@ -38,6 +40,8 @@ import org.junit.Test;
  * help of {@link RandomMatrixGenerator}
  */
 public class SpMVTest {
+  
+  protected static final Log LOG = LogFactory.getLog(SpMVTest.class);
 
   private HamaConfiguration conf;
   private FileSystem fs;
@@ -61,8 +65,7 @@ public class SpMVTest {
       String vectorPath = "";
       String outputPath = "";
       if (matrixPath.isEmpty() || vectorPath.isEmpty() || outputPath.isEmpty()) {
-        System.out
-            .println("Please setup input path for vector and matrix and output path for result.");
+        LOG.info("Please setup input path for vector and matrix and output path for result.");
         return;
       }
       ExampleDriver.main(new String[] { "spmv", matrixPath, vectorPath,
@@ -84,7 +87,6 @@ public class SpMVTest {
   public void simpleSpMVTest() {
     try {
       HamaConfiguration conf = new HamaConfiguration();
-      WritableUtil writableUtil = new WritableUtil();
       String testDir = "/simple/";
       int size = 4;
 
@@ -110,7 +112,7 @@ public class SpMVTest {
       inputMatrix.put(2, vector2);
       inputMatrix.put(3, vector3);
       String matrixPath = baseDir + testDir + "inputMatrix";
-      writableUtil.writeMatrix(matrixPath, conf, inputMatrix);
+      WritableUtil.writeMatrix(matrixPath, conf, inputMatrix);
 
       HashMap<Integer, Writable> inputVector = new HashMap<Integer, Writable>();
       DenseVectorWritable vector = new DenseVectorWritable();
@@ -121,14 +123,14 @@ public class SpMVTest {
       vector.addCell(3, 1);
       inputVector.put(0, vector);
       String vectorPath = baseDir + testDir + "inputVector";
-      writableUtil.writeMatrix(vectorPath, conf, inputVector);
+      WritableUtil.writeMatrix(vectorPath, conf, inputVector);
 
       String outputPath = baseDir + testDir;
       SpMV.main(new String[] { matrixPath, vectorPath, outputPath, "4" });
 
       String resultPath = SpMV.getResultPath();
       DenseVectorWritable result = new DenseVectorWritable();
-      writableUtil.readFromFile(resultPath, result, conf);
+      WritableUtil.readFromFile(resultPath, result, conf);
 
       double expected[] = { 38, 12, 24, 11 };
       if (result.getSize() != size)
@@ -153,22 +155,20 @@ public class SpMVTest {
   @Test
   public void simpleSpMVTestFile() {
     try {
-      WritableUtil writableUtil = new WritableUtil();
       int size = 4;
       String matrixPath = "";
       String vectorPath = "";
       String outputPath = "";
       if (matrixPath.isEmpty() || vectorPath.isEmpty() || outputPath.isEmpty()) {
-        System.out
-            .println("Please setup input path for vector and matrix and output path for result, "
-                + "if you want to run this example");
+        LOG.info("Please setup input path for vector and matrix and output path for result, "
+            + "if you want to run this example");
         return;
       }
       SpMV.main(new String[] { matrixPath, vectorPath, outputPath, "4" });
 
       String resultPath = SpMV.getResultPath();
       DenseVectorWritable result = new DenseVectorWritable();
-      writableUtil.readFromFile(resultPath, result, conf);
+      WritableUtil.readFromFile(resultPath, result, conf);
 
       double expected[] = { 38, 12, 24, 11 };
       if (result.getSize() != size)

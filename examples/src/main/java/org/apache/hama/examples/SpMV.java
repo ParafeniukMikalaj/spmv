@@ -77,8 +77,7 @@ public class SpMV {
    */
   private static void convertToDenseVector(Configuration conf)
       throws IOException {
-    WritableUtil util = new WritableUtil();
-    String resultPath = util.convertSpMVOutputToDenseVector(
+    String resultPath = WritableUtil.convertSpMVOutputToDenseVector(
         conf.get(outputPathString), conf);
     setResultPath(resultPath);
   }
@@ -86,7 +85,7 @@ public class SpMV {
   /**
    * This class performs sparse matrix vector multiplication. u = m * v.
    */
-  private static class SpMVExecutor
+  private static class SpMVBSP
       extends
       BSP<IntWritable, SparseVectorWritable, IntWritable, DoubleWritable, NullWritable> {
     private DenseVectorWritable v;
@@ -100,9 +99,8 @@ public class SpMV {
         throws IOException, SyncException, InterruptedException {
       // reading input vector, which represented as matrix row
       Configuration conf = peer.getConfiguration();
-      WritableUtil util = new WritableUtil();
       v = new DenseVectorWritable();
-      util.readFromFile(conf.get(inputVectorPathString), v, conf);
+      WritableUtil.readFromFile(conf.get(inputVectorPathString), v, conf);
       peer.sync();
     }
 
@@ -141,7 +139,7 @@ public class SpMV {
       InterruptedException, ClassNotFoundException {
     BSPJob bsp = new BSPJob(conf, SpMV.class);
     bsp.setJobName("Sparse matrix vector multiplication");
-    bsp.setBspClass(SpMVExecutor.class);
+    bsp.setBspClass(SpMVBSP.class);
     /*
      * Input matrix is presented as pairs of integer and SparseVectorWritable.
      * Output is pairs of integer and double
@@ -166,19 +164,18 @@ public class SpMV {
 
     long startTime = System.currentTimeMillis();
     if (bsp.waitForCompletion(true)) {
-      System.out.println("Job Finished in "
-          + (double) (System.currentTimeMillis() - startTime) / 1000.0
+      LOG.info("Job Finished in "
+          + (System.currentTimeMillis() - startTime) / 1000.0
           + " seconds.");
       convertToDenseVector(conf);
-      System.out.println("Result is in " + getResultPath());
+      LOG.info("Result is in " + getResultPath());
     } else {
       setResultPath(null);
     }
   }
 
   private static void printUsage() {
-    System.out
-        .println("Usage: spmv <input matrix> <intput vector> <output vector> [number of tasks (default max)]");
+    LOG.info("Usage: spmv <input matrix> <intput vector> <output vector> [number of tasks (default max)]");
   }
 
   /**
